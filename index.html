@@ -1,116 +1,94 @@
-<!DOCTYPE html>
-<html lang="ja">
+<!DOCTYPE html><html lang="ja">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>EmoCode 読み取り＆生成</title>
+  <title>EmoLink</title>
   <style>
     body {
-      font-family: sans-serif;
-      background: #f5f5f5;
-      margin: 0; padding: 0;
-      display: flex; flex-direction: column; align-items: center;
+      font-family: 'Segoe UI', sans-serif;
+      padding: 1em;
+      background: #f5f5fa;
+      color: #333;
     }
-    h1 { margin-top: 1rem; color: #444; }
-    video, canvas {
-      width: 90%; max-width: 400px; margin-top: 1rem;
-      border-radius: 12px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    h1 {
+      font-size: 1.8em;
+      color: #444;
     }
-    .controls, .plugins, .output, .history {
-      margin: 1rem; padding: 1rem;
-      background: white; border-radius: 1rem;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-      width: 90%; max-width: 600px;
+    label, button {
+      display: block;
+      margin: 1em 0 0.5em;
     }
-    label { display: block; margin-bottom: 0.5rem; }
     textarea, input[type="text"] {
-      width: 100%; padding: 0.5rem; border-radius: 8px;
-      border: 1px solid #ccc; font-family: monospace;
+      width: 100%;
+      padding: 0.5em;
+      font-size: 1em;
+      border: 1px solid #ccc;
+      border-radius: 8px;
     }
-    .emoji-output, .log { margin-top: 1rem; white-space: pre-wrap; word-break: break-word; }
+    button {
+      padding: 0.7em;
+      border: none;
+      border-radius: 8px;
+      background-color: #5e72e4;
+      color: white;
+      font-size: 1em;
+      cursor: pointer;
+    }
+    .output {
+      margin-top: 1em;
+      background: #fff;
+      padding: 1em;
+      border-radius: 10px;
+      border: 1px solid #ddd;
+    }
   </style>
 </head>
 <body>
-  <h1>📷 EmoCode Scanner & Generator</h1>
-  <video id="video" autoplay playsinline></video>
-  <canvas id="canvas" style="display:none;"></canvas>  <div class="controls">
-    <label for="textInput">🔤 入力テキストから絵文字コードを生成:</label>
-    <input type="text" id="textInput" placeholder="https://example.com">
-    <button onclick="generateCode()">生成</button>
-    <div class="emoji-output" id="emojiOutput"></div>
-  </div>  <div class="plugins">
-    <label><input type="checkbox" id="pluginPoem"> EmoPoem</label>
-    <label><input type="checkbox" id="pluginDNA"> EmoDNA</label>
-    <label><input type="checkbox" id="pluginAuth"> EmoAuth (RSA暗号)</label>
-    <label><input type="checkbox" id="pluginTime"> EmoTimeLock</label>
-    <label><input type="checkbox" id="pluginTicket"> EmoTicket</label>
-  </div>  <div class="output">
-    <strong>🧠 OCR結果：</strong>
-    <div class="log" id="ocrLog"></div>
-  </div>  <div class="history">
-    <strong>📁 読み取り履歴:</strong>
-    <div class="log" id="historyLog"></div>
-  </div>  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.0.0/dist/tesseract.min.js"></script>  <script>
-    const video = document.getElementById('video');
-    const canvas = document.getElementById('canvas');
-    const ctx = canvas.getContext('2d');
-    const ocrLog = document.getElementById('ocrLog');
-    const emojiOutput = document.getElementById('emojiOutput');
-    const historyLog = document.getElementById('historyLog');
+  <h1>🔐 EmoLink データ共有</h1><label for="inputText">🔤 共有するテキスト:</label>
 
-    // 絵文字セット（例: Unicode範囲から動的取得も可）
-    const emojiSet = [..."😀😃😄😁😆😅😂🤣😊😇🙂🙃😉😌😍🥰😘😗😙😚😋😛😝😜🤪🤨🧐🤓😎🥳"];
+  <textarea id="inputText" rows="3" placeholder="例: https://example.com や [こんにちは]"></textarea><button onclick="handleEncrypt()">🔒 暗号化して絵文字コード化</button>
 
-    // ランダムに絵文字列を生成
-    function generateCode() {
-      const input = document.getElementById('textInput').value;
-      const enabledPlugins = {
-        poem: document.getElementById('pluginPoem').checked,
-        dna: document.getElementById('pluginDNA').checked,
-        auth: document.getElementById('pluginAuth').checked,
-        time: document.getElementById('pluginTime').checked,
-        ticket: document.getElementById('pluginTicket').checked
-      };
+  <div class="output" id="outputArea">
+    <strong>🔑 公開鍵:</strong>
+    <pre id="publicKey"></pre><strong>📦 共有用暗号化データ (Base64):</strong>
+<pre id="encryptedText"></pre>
 
-      let encoded = btoa(input);
-      if (enabledPlugins.auth) {
-        encoded = rsaEncrypt(encoded);
-      }
-      const emojis = encodeToEmojis(encoded);
-      emojiOutput.textContent = emojis;
+<strong>🔓 復号化用秘密鍵:</strong>
+<pre id="privateKey"></pre>
+
+  </div>  <script>
+    async function generateRSAKeyPair() {
+      return await crypto.subtle.generateKey({
+        name: "RSA-OAEP",
+        modulusLength: 2048,
+        publicExponent: new Uint8Array([1, 0, 1]),
+        hash: "SHA-256"
+      }, true, ["encrypt", "decrypt"]);
     }
 
-    function encodeToEmojis(data) {
-      let output = '';
-      for (let i = 0; i < data.length; i++) {
-        const index = data.charCodeAt(i) % emojiSet.length;
-        output += emojiSet[index];
-      }
-      return output;
+    async function exportKey(key, format) {
+      const exported = await crypto.subtle.exportKey(format, key);
+      return btoa(String.fromCharCode(...new Uint8Array(exported)));
     }
 
-    function rsaEncrypt(text) {
-      // 仮のRSA暗号処理（デモ用、実際にはWebCryptoやJSEncryptで実装）
-      return text.split('').reverse().join('');
+    async function encryptData(publicKey, text) {
+      const encoded = new TextEncoder().encode(text);
+      const encrypted = await crypto.subtle.encrypt({ name: "RSA-OAEP" }, publicKey, encoded);
+      return btoa(String.fromCharCode(...new Uint8Array(encrypted)));
     }
 
-    // カメラ初期化
-    navigator.mediaDevices.getUserMedia({ video: true })
-      .then(stream => video.srcObject = stream)
-      .catch(err => alert("カメラにアクセスできません: " + err));
+    async function handleEncrypt() {
+      const input = document.getElementById("inputText").value;
+      if (!input) return alert("テキストを入力してください。");
 
-    // OCR読み取り
-    setInterval(async () => {
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      const { data: { text } } = await Tesseract.recognize(canvas, 'eng');
-      if (text.trim()) {
-        ocrLog.textContent = text.trim();
-        if (!historyLog.textContent.includes(text.trim())) {
-          historyLog.textContent += `\n${text.trim()}`;
-        }
-      }
-    }, 5000);
+      const keyPair = await generateRSAKeyPair();
+      const pubKey = await exportKey(keyPair.publicKey, "spki");
+      const privKey = await exportKey(keyPair.privateKey, "pkcs8");
+      const encrypted = await encryptData(keyPair.publicKey, input);
+
+      document.getElementById("publicKey").textContent = pubKey;
+      document.getElementById("privateKey").textContent = privKey;
+      document.getElementById("encryptedText").textContent = encrypted;
+    }
   </script></body>
 </html>
