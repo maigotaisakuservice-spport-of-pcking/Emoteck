@@ -1,112 +1,80 @@
-<!DOCTYPE html>
-<html lang="ja">
+<!DOCTYPE html><html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>EmoLink</title>
+  <meta charset="UTF-8">
+  <title>EmoCode Reader</title>
   <style>
     body {
-      font-family: "Segoe UI", sans-serif;
-      background: #f4f4f8;
-      padding: 2rem;
-      max-width: 700px;
-      margin: auto;
+      font-family: sans-serif;
+      background: #f9f9f9;
       color: #333;
+      padding: 1em;
     }
-
     h1 {
-      text-align: center;
-      font-size: 2rem;
-      margin-bottom: 1rem;
+      font-size: 1.8em;
+      color: #5c6ac4;
     }
-
-    label {
-      display: block;
-      margin-top: 1rem;
-      font-weight: bold;
-    }
-
-    input[type="text"], input[type="email"], input[type="tel"], input[type="date"] {
+    #video {
+      border: 2px solid #ccc;
+      border-radius: 12px;
       width: 100%;
-      padding: 0.6rem;
-      border-radius: 0.5rem;
-      border: 1px solid #ccc;
-      margin-top: 0.2rem;
+      max-width: 480px;
     }
-
-    .checkbox-group {
-      margin-top: 1rem;
+    #controls, #log, #result, #plugins {
+      margin-top: 1em;
     }
-
-    .checkbox-group label {
-      font-weight: normal;
-      display: flex;
-      align-items: center;
+    .plugin-toggle {
+      margin: 0.5em 0;
     }
-
-    button {
-      padding: 0.8rem 1.2rem;
-      border: none;
-      background-color: #5b9bd5;
-      color: white;
-      border-radius: 0.5rem;
-      margin-top: 1rem;
-      cursor: pointer;
-    }
-
-    #cameraView, #ocrResult {
-      margin-top: 1rem;
-      width: 100%;
-      max-height: 300px;
-      background: #eee;
-      border-radius: 0.5rem;
-      object-fit: cover;
-    }
-
-    .output-area {
-      background: #fff;
-      padding: 1rem;
-      border-radius: 1rem;
-      margin-top: 1.5rem;
-      box-shadow: 0 0 5px rgba(0,0,0,0.1);
+    #result {
+      white-space: pre-wrap;
+      background: #eef;
+      padding: 1em;
+      border-radius: 8px;
     }
   </style>
 </head>
 <body>
-  <h1>EmoLink</h1>
+<h1>📸 EmoCode Reader</h1>
+<video id="video" autoplay playsinline></video>
+<div id="controls">
+  <button onclick="captureAndRecognize()">📷 Capture & OCR</button>
+</div>
+<div id="plugins">
+  <h2>🔌 Plugins</h2>
+  <label class="plugin-toggle"><input type="checkbox" id="plugin-auth"> EmoAuth 🔐</label><br>
+  <label class="plugin-toggle"><input type="checkbox" id="plugin-timelock"> EmoTimeLock ⏰</label><br>
+  <label class="plugin-toggle"><input type="checkbox" id="plugin-ticket"> EmoTicket 🎫</label><br>
+</div>
+<div id="result"></div>
+<div id="log"></div>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.0.1/dist/tesseract.min.js"></script>
+<script>
+const video = document.getElementById('video');
+const resultDiv = document.getElementById('result');
+const logDiv = document.getElementById('log');
+const plugins = {
+  auth: document.getElementById('plugin-auth'),
+  timelock: document.getElementById('plugin-timelock'),
+  ticket: document.getElementById('plugin-ticket')
+};async function initCamera() { try { const stream = await navigator.mediaDevices.getUserMedia({ video: true }); video.srcObject = stream; log('Camera initialized'); } catch (e) { log('Camera error: ' + e); } }
 
-  <label for="inputText">共有する情報（URL/メール/電話）</label>
-  <input id="inputText" type="text" placeholder="https://example.com または user@example.com" />
+function captureAndRecognize() { const canvas = document.createElement('canvas'); canvas.width = video.videoWidth; canvas.height = video.videoHeight; const ctx = canvas.getContext('2d'); ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-  <label for="lockDate">閲覧可能な開始日（任意）</label>
-  <input id="lockDate" type="date" />
+Tesseract.recognize(canvas.toDataURL(), 'eng', { tessedit_char_whitelist: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789📱🔐🎫⏰" }) .then(({ data: { text } }) => { log('OCR complete'); resultDiv.innerText = parseEmoCode(text); }) .catch(err => log('OCR error: ' + err)); }
 
-  <div class="checkbox-group">
-    <label><input type="checkbox" id="rsaEncrypt" /> RSA暗号化を有効にする</label>
-    <label><input type="checkbox" id="pluginEmoQR" /> EmoQR（リンク共有）</label>
-    <label><input type="checkbox" id="pluginEmoPoem" /> EmoPoem（詩表現）</label>
-    <label><input type="checkbox" id="pluginEmoTimeLock" /> EmoTimeLock（日付ロック）</label>
-    <label><input type="checkbox" id="pluginMoodCode" /> MoodCode（感情コード）</label>
-    <label><input type="checkbox" id="pluginEmoTicket" /> EmoTicket（イベント参加）</label>
-  </div>
+function parseEmoCode(text) { let output = Raw OCR: ${text}\n\n;
 
-  <button onclick="generateEmojiCode()">絵文字コードを生成</button>
+if (plugins.auth.checked) { output += '[🔐 EmoAuth enabled]\n'; // TODO: RSA decryption logic here } if (plugins.timelock.checked) { output += '[⏰ EmoTimeLock enabled]\n'; // TODO: Compare current date with embedded date } if (plugins.ticket.checked) { output += '[🎫 EmoTicket enabled]\n'; // TODO: Token validation logic }
 
-  <div class="output-area">
-    <strong>生成された絵文字コード:</strong>
-    <div id="emojiOutput">（ここに表示されます）</div>
-    <div id="rsaKeyOutput"></div>
-  </div>
+// Extract URLs / Emails / Phone Numbers const urlMatch = text.match(/https?://[\w./-]+/); const mailMatch = text.match(/[\w.-]+@[\w.-]+.[a-z]+/); const phoneMatch = text.match(/+?[0-9]{8,15}/);
 
-  <hr />
+if (urlMatch) output += 📎 URL: ${urlMatch[0]}\n; if (mailMatch) output += ✉️ Email: ${mailMatch[0]}\n; if (phoneMatch) output += 📞 Phone: ${phoneMatch[0]}\n;
 
-  <button onclick="startCamera()">カメラ起動して読み取り</button>
-  <video id="cameraView" autoplay muted playsinline></video>
+return output; }
 
-  <div class="output-area">
-    <strong>OCR結果:</strong>
-    <div id="ocrResult">（ここに表示されます）</div>
-  </div>
+function log(msg) { const time = new Date().toLocaleTimeString(); logDiv.innerText += [${time}] ${msg}\n; }
 
-  <script src="main.js"></script>
+initCamera(); </script>
+
 </body>
 </html>
